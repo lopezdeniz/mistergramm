@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f5f5f7">
+  <link rel="icon" href="icon.png" type="image/png">
+  <title>mistergramm</title>
+  <style>
+    :root {
+      --ui-scale: 1;
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --text: #1c1c1e;
+      --text2: #8e8e93;
+      --accent: #007aff;
+      --accent2: #34c759;
+      --red: #ff3b30;
+      --radius: calc(16px * var(--ui-scale));
+      --radius-sm: calc(10px * var(--ui-scale));
+      --radius-xs: calc(6px * var(--ui-scale));
+      --font-xl: calc(22px * var(--ui-scale));
+      --font-l: calc(17px * var(--ui-scale));
+      --font-m: calc(15px * var(--ui-scale));
+      --font-s: calc(13px * var(--ui-scale));
+      --font-xs: calc(11px * var(--ui-scale));
+      --pad: calc(16px * var(--ui-scale));
+      --pad-sm: calc(10px * var(--ui-scale));
+      --pad-xs: calc(6px * var(--ui-scale));
+      --header-h: calc(52px * var(--ui-scale));
+      --avatar: calc(40px * var(--ui-scale));
+      --bubble-radius: calc(18px * var(--ui-scale));
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; }
+    html,body { height:100%; width:100%; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; font-size:var(--font-m); letter-spacing:-0.01em; position:fixed; top:0; left:0; right:0; bottom:0; }
+    #app { height:100%; width:100%; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+    .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; background:var(--bg); transition:transform .3s ease,opacity .3s ease; will-change:transform,opacity; overflow:hidden; }
+    .screen.hidden-left { transform:translateX(-100%); opacity:0; pointer-events:none; }
+    .screen.hidden-right { transform:translateX(100%); opacity:0; pointer-events:none; }
+    .screen.hidden-fade { opacity:0; pointer-events:none; transform:scale(0.96); }
+    .screen.active { transform:translateX(0); opacity:1; pointer-events:auto; }
+    .header { height:var(--header-h); padding-top:var(--safe-top); display:flex; align-items:center; justify-content:space-between; padding-left:var(--pad); padding-right:var(--pad); background:rgba(245,245,247,.88); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:.5px solid rgba(0,0,0,.08); flex-shrink:0; z-index:10; }
+    .header-title { font-size:var(--font-xl); font-weight:700; color:var(--text); flex:1; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .header-btn { width:calc(36px*var(--ui-scale)); height:calc(36px*var(--ui-scale)); border-radius:50%; border:none; background:rgba(0,0,0,.04); color:var(--accent); font-size:var(--font-l); cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .header-btn:active { background:rgba(0,0,0,.12); }
+    .content { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:var(--safe-bottom); }
+    .list-item { display:flex; align-items:center; gap:var(--pad-sm); padding:var(--pad-sm) var(--pad); border-bottom:.5px solid rgba(0,0,0,.05); min-height:calc(56px*var(--ui-scale)); }
+    .avatar { width:var(--avatar); height:var(--avatar); border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:var(--font-m); color:#fff; position:relative; }
+    .online-dot { position:absolute; bottom:0; right:0; width:12px; height:12px; border-radius:50%; background:var(--accent2); border:2px solid #fff; }
+    .online-dot.offline { background:#c7c7cc; }
+    .list-name { font-weight:600; }
+    .chat-messages { flex:1; overflow-y:auto; padding:var(--pad-sm) var(--pad); display:flex; flex-direction:column; gap:6px; }
+    .msg-row { display:flex; max-width:85%; animation:msgIn .2s ease; }
+    .msg-row.sent { align-self:flex-end; }
+    .msg-row.received { align-self:flex-start; }
+    @keyframes msgIn { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+    .bubble { padding:10px 14px; border-radius:var(--bubble-radius); font-size:var(--font-m); line-height:1.4; word-break:break-word; }
+    .sent .bubble { background:var(--accent); color:#fff; border-bottom-right-radius:4px; }
+    .received .bubble { background:#e9e9eb; color:var(--text); border-bottom-left-radius:4px; }
+    .msg-time { font-size:11px; opacity:0.7; margin-top:4px; text-align:right; }
+    .input-bar { display:flex; align-items:center; gap:8px; padding:8px 16px; padding-bottom:calc(8px + var(--safe-bottom)); background:rgba(245,245,247,.92); backdrop-filter:blur(20px); border-top:.5px solid rgba(0,0,0,.08); flex-shrink:0; }
+    .input-bar input { flex:1; border:none; background:#e5e5ea; border-radius:20px; padding:10px 14px; font-size:var(--font-m); outline:none; }
+    .send-btn { width:38px; height:38px; border-radius:50%; background:var(--accent); color:#fff; border:none; font-size:20px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+    .btn { background:var(--accent); color:#fff; border:none; border-radius:20px; padding:12px 24px; font-size:var(--font-m); font-weight:600; cursor:pointer; width:100%; max-width:280px; margin:0 auto; display:block; text-align:center; }
+    .btn-outline { background:transparent; border:1.5px solid var(--accent); color:var(--accent); }
+    .toast { position:fixed; top:calc(var(--safe-top) + 60px); left:50%; transform:translateX(-50%); background:#1c1c1e; color:#fff; padding:10px 20px; border-radius:50px; font-size:var(--font-s); z-index:999; opacity:0; transition:opacity .3s; pointer-events:none; }
+    .toast.show { opacity:1; }
+    .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text2); gap:10px; padding:20px; text-align:center; }
+    input, button { font-family:inherit; }
+    .role-btn { margin: 10px 0; }
+    @media (max-width:380px) { :root { --ui-scale:0.92; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Экран выбора роли -->
+    <div id="screen-role" class="screen active">
+      <div class="header"><span class="header-title">mistergramm</span></div>
+      <div class="content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+        <div style="font-size:48px;">💬</div>
+        <button class="btn role-btn" id="btn-create">Создать комнату</button>
+        <button class="btn btn-outline role-btn" id="btn-join">Присоединиться</button>
+      </div>
+    </div>
+    <!-- Экран ввода имени и ID хоста (если присоединение) -->
+    <div id="screen-setup" class="screen hidden-right">
+      <div class="header"><span class="header-title" id="setup-title">Создание комнаты</span></div>
+      <div class="content" style="display:flex;flex-direction:column;gap:16px;padding:24px;">
+        <input type="text" id="input-name" placeholder="Ваше имя" maxlength="30" style="padding:12px;border-radius:10px;border:1px solid #d1d1d6;font-size:var(--font-m);">
+        <input type="text" id="input-host-id" placeholder="ID комнаты (только для подключения)" style="display:none;padding:12px;border-radius:10px;border:1px solid #d1d1d6;font-size:var(--font-m);">
+        <button class="btn" id="btn-go">Продолжить</button>
+      </div>
+    </div>
+    <!-- Основной экран чата -->
+    <div id="screen-main" class="screen hidden-right">
+      <div class="header">
+        <span class="header-title" id="main-title">Комната</span>
+        <button class="header-btn" id="btn-settings" style="font-size:20px;">⚙️</button>
+      </div>
+      <div class="content" id="participants-list" style="max-height:120px;overflow-y:auto;border-bottom:1px solid rgba(0,0,0,.05);"></div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="input-bar">
+        <input type="text" id="input-message" placeholder="Сообщение..." maxlength="5000">
+        <button class="send-btn" id="btn-send">↑</button>
+      </div>
+    </div>
+    <!-- Экран настроек -->
+    <div id="screen-settings" class="screen hidden-right">
+      <div class="header">
+        <button class="header-btn" id="btn-back-settings">←</button>
+        <span class="header-title">Настройки</span>
+      </div>
+      <div class="content" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+        <button class="btn btn-outline" id="btn-reset">Сбросить приложение</button>
+        <p style="color:var(--text2);font-size:var(--font-s);text-align:center;">Все данные будут удалены</p>
+      </div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script>
+    (function() {
+      const $ = s => document.querySelector(s);
+      const screenRole = $('#screen-role');
+      const screenSetup = $('#screen-setup');
+      const screenMain = $('#screen-main');
+      const screenSettings = $('#screen-settings');
+      const toast = $('#toast');
+
+      let role = null; // 'host' or 'client'
+      let myName = '';
+      let myPeerId = '';
+      let hostPeerId = '';
+      let peer = null;
+      let connections = {}; // peerId -> DataConnection
+      let keyPair = null;
+      let publicJWK = null;
+      let sharedSecrets = {};
+      let participants = {}; // peerId: {name, publicJWK, online}
+      let messageHistory = [];
+      let db = null;
+
+      const DB_NAME = 'mistergrammDB';
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, 1);
+          req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('messages')) db.createObjectStore('messages', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('participants')) db.createObjectStore('participants', { keyPath: 'id' });
+          };
+          req.onsuccess = e => resolve(e.target.result);
+          req.onerror = e => reject(e.target.error);
+        });
+      }
+      async function dbAddMessage(msg) {
+        const tx = db.transaction('messages','readwrite');
+        tx.objectStore('messages').put(msg);
+        return new Promise(r => { tx.oncomplete = r; });
+      }
+      async function dbGetMessages() {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('messages','readonly');
+          const req = tx.objectStore('messages').getAll();
+          req.onsuccess = () => resolve(req.result.sort((a,b)=>a.timestamp-b.timestamp));
+          req.onerror = reject;
+        });
+      }
+      async function dbSaveParticipant(p) {
+        const tx = db.transaction('participants','readwrite');
+        tx.objectStore('participants').put(p);
+        return new Promise(r => { tx.oncomplete = r; });
+      }
+      async function dbGetParticipants() {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('participants','readonly');
+          const req = tx.objectStore('participants').getAll();
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = reject;
+        });
+      }
+      async function dbClear() {
+        const tx = db.transaction(['messages','participants'],'readwrite');
+        tx.objectStore('messages').clear();
+        tx.objectStore('participants').clear();
+        return new Promise(r => { tx.oncomplete = r; });
+      }
+
+      function showToast(msg, dur=2000) {
+        toast.textContent = msg; toast.classList.add('show');
+        clearTimeout(toast._t); toast._t = setTimeout(()=>toast.classList.remove('show'), dur);
+      }
+      function formatTime(ts) { const d=new Date(ts); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
+      function avatarColor(id) { let h=0; for(let i=0;i<id.length;i++) h=((h<<5)-h+id.charCodeAt(i))|0; return `hsl(${Math.abs(h)%360},55%,50%)`; }
+      function initials(name) { return name?name.substring(0,2).toUpperCase():'??'; }
+      function escapeHTML(s) { const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+      function arrayBufferToBase64(buf) { let b=''; const u=new Uint8Array(buf); for(let i=0;i<u.length;i++) b+=String.fromCharCode(u[i]); return btoa(b); }
+      function base64ToArrayBuffer(b64) { const b=atob(b64); const u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u.buffer; }
+
+      async function generateKeys() {
+        keyPair = await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'}, true, ['deriveBits']);
+        publicJWK = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
+      }
+      async function importPub(jwk) { return await crypto.subtle.importKey('jwk', jwk, {name:'ECDH',namedCurve:'P-256'}, true, []); }
+      async function deriveSecret(priv, pub) {
+        const bits = await crypto.subtle.deriveBits({name:'ECDH',public:pub}, priv, 256);
+        const hash = await crypto.subtle.digest('SHA-256', bits);
+        return await crypto.subtle.importKey('raw', hash, {name:'AES-GCM'}, false, ['encrypt','decrypt']);
+      }
+      async function getSharedSecret(peerId) {
+        if (sharedSecrets[peerId]) return sharedSecrets[peerId];
+        const p = participants[peerId];
+        if (!p || !p.publicJWK) throw new Error('No key');
+        const pub = await importPub(p.publicJWK);
+        const secret = await deriveSecret(keyPair.privateKey, pub);
+        sharedSecrets[peerId] = secret;
+        return secret;
+      }
+      async function encryptText(plain, peerId) {
+        const secret = await getSharedSecret(peerId);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const enc = new TextEncoder().encode(plain);
+        const ct = await crypto.subtle.encrypt({name:'AES-GCM',iv}, secret, enc);
+        const combined = new Uint8Array(iv.length + ct.byteLength);
+        combined.set(iv); combined.set(new Uint8Array(ct), iv.length);
+        return arrayBufferToBase64(combined.buffer);
+      }
+      async function decryptText(encB64, peerId) {
+        const secret = await getSharedSecret(peerId);
+        const combined = new Uint8Array(base64ToArrayBuffer(encB64));
+        const iv = combined.slice(0,12);
+        const ct = combined.slice(12);
+        const dec = await crypto.subtle.decrypt({name:'AES-GCM',iv}, secret, ct);
+        return new TextDecoder().decode(dec);
+      }
+
+      function navigate(screen) {
+        [screenRole, screenSetup, screenMain, screenSettings].forEach(s => s.classList.remove('active','hidden-left','hidden-right','hidden-fade'));
+        if (screen === screenRole) { screenRole.classList.add('active'); screenSetup.classList.add('hidden-right'); screenMain.classList.add('hidden-right'); screenSettings.classList.add('hidden-right'); }
+        else if (screen === screenSetup) { screenSetup.classList.add('active'); screenRole.classList.add('hidden-left'); screenMain.classList.add('hidden-right'); screenSettings.classList.add('hidden-right'); }
+        else if (screen === screenMain) { screenMain.classList.add('active'); screenRole.classList.add('hidden-left'); screenSetup.classList.add('hidden-left'); screenSettings.classList.add('hidden-right'); }
+        else if (screen === screenSettings) { screenSettings.classList.add('active'); screenMain.classList.add('hidden-left'); }
+        adaptLayout();
+      }
+      function adaptLayout() {
+        const root = document.documentElement;
+        root.style.setProperty('--ui-scale','1');
+        requestAnimationFrame(()=>{
+          const active = document.querySelector('.screen.active');
+          if (!active) return;
+          const sh = active.scrollHeight, ch = active.clientHeight;
+          if (sh > ch + 10) {
+            const scale = Math.max(0.85, ch / sh);
+            root.style.setProperty('--ui-scale', scale.toString());
+          }
+        });
+      }
+
+      function updateParticipantsUI() {
+        const list = $('#participants-list');
+        if (!list) return;
+        const html = Object.values(participants).map(p => `
+          <div class="list-item">
+            <div class="avatar" style="background:${avatarColor(p.id||'0')};">${initials(p.name)}<div class="online-dot${p.online?'':' offline'}"></div></div>
+            <span class="list-name">${escapeHTML(p.name)} ${p.id === myPeerId ? '(вы)' : ''}</span>
+          </div>`).join('');
+        list.innerHTML = html || '<div class="empty">Нет участников</div>';
+      }
+
+      function addMessageToUI(msg) {
+        const div = document.createElement('div');
+        div.className = `msg-row ${msg.from === myPeerId ? 'sent' : 'received'}`;
+        div.innerHTML = `<div class="bubble">${escapeHTML(msg.text)}<div class="msg-time">${formatTime(msg.timestamp)}</div></div>`;
+        $('#chat-messages').appendChild(div);
+        $('#chat-messages').scrollTop = $('#chat-messages').scrollHeight;
+      }
+
+      function renderAllMessages() {
+        $('#chat-messages').innerHTML = '';
+        messageHistory.forEach(m => addMessageToUI(m));
+      }
+
+      async function sendMessage(text) {
+        if (!text.trim()) return;
+        const msg = { id: Date.now().toString()+Math.random(), from: myPeerId, text: text.trim(), timestamp: Date.now() };
+        messageHistory.push(msg);
+        addMessageToUI(msg);
+        if (role === 'host') {
+          await dbAddMessage(msg);
+        }
+        // Отправляем всем подключенным
+        for (const [pid, conn] of Object.entries(connections)) {
+          if (conn.open) {
+            try {
+              const enc = await encryptText(JSON.stringify(msg), pid);
+              conn.send({ type: 'message', data: enc });
+            } catch(e) { console.warn('Send fail', e); }
+          }
+        }
+        if (role === 'host' && !connections[myPeerId]) {
+          // если хост без клиентов, просто сохраняем
+        }
+      }
+
+      function broadcastParticipants() {
+        const list = Object.values(participants).map(p => ({ id: p.id, name: p.name, publicJWK: p.publicJWK, online: p.online }));
+        const data = { type: 'participants', list };
+        Object.values(connections).forEach(conn => {
+          if (conn.open) conn.send(data);
+        });
+      }
+
+      async function onConnection(conn) {
+        const pid = conn.peer;
+        connections[pid] = conn;
+        conn.on('open', async () => {
+          // Отправляем свой ключ и запрашиваем его ключ
+          conn.send({ type: 'key', publicJWK, name: myName });
+        });
+        conn.on('data', async (data) => {
+          if (data.type === 'key') {
+            if (!participants[pid]) {
+              participants[pid] = { id: pid, name: data.name, publicJWK: data.publicJWK, online: true };
+              if (role === 'host') {
+                await dbSaveParticipant(participants[pid]);
+                broadcastParticipants();
+              }
+              updateParticipantsUI();
+            }
+            // Отправляем свою часть ключа, если еще не
+            if (!connections[pid]?.sentKey) {
+              conn.send({ type: 'key', publicJWK, name: myName });
+              connections[pid].sentKey = true;
+            }
+          } else if (data.type === 'participants' && role === 'client') {
+            participants = {};
+            data.list.forEach(p => { participants[p.id] = p; });
+            updateParticipantsUI();
+          } else if (data.type === 'message') {
+            try {
+              const dec = await decryptText(data.data, pid);
+              const msg = JSON.parse(dec);
+              if (!messageHistory.some(m => m.id === msg.id)) {
+                messageHistory.push(msg);
+                addMessageToUI(msg);
+                if (role === 'host') await dbAddMessage(msg);
+                // Если хост, переслать другим
+                if (role === 'host') {
+                  for (const [otherPid, otherConn] of Object.entries(connections)) {
+                    if (otherPid !== pid && otherConn.open) {
+                      otherConn.send({ type: 'message', data: data.data });
+                    }
+                  }
+                }
+              }
+            } catch(e) { console.warn('decrypt error', e); }
+          }
+        });
+        conn.on('close', () => {
+          if (participants[pid]) participants[pid].online = false;
+          updateParticipantsUI();
+          delete connections[pid];
+          if (role === 'host') broadcastParticipants();
+        });
+        conn.on('error', () => {});
+      }
+
+      async function startHost() {
+        role = 'host';
+        myPeerId = myName + '-' + Date.now();
+        peer = new Peer(myPeerId, { debug: 0 });
+        peer.on('open', id => {
+          myPeerId = id;
+          participants[id] = { id, name: myName, publicJWK, online: true };
+          updateParticipantsUI();
+          $('#main-title').textContent = 'Комната: '+id.substring(0,8);
+          showToast('Комната создана. ID: '+id);
+        });
+        peer.on('connection', onConnection);
+        peer.on('disconnected', () => peer.reconnect());
+        peer.on('error', err => console.warn(err));
+        // Загружаем сохраненных участников
+        if (db) {
+          const saved = await dbGetParticipants();
+          saved.forEach(p => { if (p.id !== myPeerId) participants[p.id] = p; });
+          updateParticipantsUI();
+          messageHistory = await dbGetMessages();
+          renderAllMessages();
+        }
+        navigate(screenMain);
+      }
+
+      async function startClient(hostId) {
+        role = 'client';
+        hostPeerId = hostId;
+        myPeerId = myName + '-' + Date.now();
+        peer = new Peer(myPeerId, { debug: 0 });
+        peer.on('open', id => {
+          myPeerId = id;
+          const conn = peer.connect(hostId, { reliable: true });
+          connections[hostId] = conn;
+          onConnection(conn);
+          $('#main-title').textContent = 'Чат с '+hostId.substring(0,8);
+          navigate(screenMain);
+        });
+        peer.on('connection', onConnection);
+        peer.on('error', err => console.warn(err));
+        participants[myPeerId] = { id: myPeerId, name: myName, publicJWK, online: true };
+        updateParticipantsUI();
+      }
+
+      document.getElementById('btn-create').addEventListener('click', () => {
+        role = 'host';
+        document.getElementById('setup-title').textContent = 'Создание комнаты';
+        document.getElementById('input-host-id').style.display = 'none';
+        navigate(screenSetup);
+      });
+      document.getElementById('btn-join').addEventListener('click', () => {
+        role = 'client';
+        document.getElementById('setup-title').textContent = 'Присоединение';
+        document.getElementById('input-host-id').style.display = '';
+        navigate(screenSetup);
+      });
+      document.getElementById('btn-go').addEventListener('click', async () => {
+        const name = document.getElementById('input-name').value.trim();
+        if (!name || name.length < 2) return showToast('Введите имя');
+        myName = name;
+        if (!keyPair) await generateKeys();
+        if (role === 'host') {
+          await startHost();
+        } else {
+          const hostId = document.getElementById('input-host-id').value.trim();
+          if (!hostId) return showToast('Введите ID комнаты');
+          await startClient(hostId);
+        }
+      });
+      document.getElementById('btn-send').addEventListener('click', () => {
+        sendMessage(document.getElementById('input-message').value);
+        document.getElementById('input-message').value = '';
+      });
+      document.getElementById('input-message').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          sendMessage(e.target.value);
+          e.target.value = '';
+        }
+      });
+      document.getElementById('btn-settings').addEventListener('click', () => navigate(screenSettings));
+      document.getElementById('btn-back-settings').addEventListener('click', () => navigate(screenMain));
+      document.getElementById('btn-reset').addEventListener('click', async () => {
+        if (confirm('Удалить все данные и выйти?')) {
+          if (db) await dbClear();
+          localStorage.clear();
+          if (peer) peer.destroy();
+          location.reload();
+        }
+      });
+
+      window.addEventListener('resize', adaptLayout);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', adaptLayout);
+      }
+      (async () => {
+        db = await openDB();
+        // Если есть сохраненная роль, восстанавливаем?
+        const savedRole = localStorage.getItem('mgram_role');
+        if (savedRole && savedRole === 'host') {
+          role = 'host';
+          myName = localStorage.getItem('mgram_name') || 'User';
+          await generateKeys();
+          await startHost();
+        } else {
+          navigate(screenRole);
+        }
+        adaptLayout();
+      })();
+    })();
+  </script>
+</body>
+</html>
